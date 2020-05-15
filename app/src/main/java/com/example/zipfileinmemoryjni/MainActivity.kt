@@ -45,16 +45,16 @@ class MainActivity : AppCompatActivity() {
                     byteBuffer.put(inBytes)
                 }
                 byteBuffer.flip()
-                val entriesNamesAndSizes = ArrayList<Pair<String, Long>>()
+//                val entriesNamesAndSizes = ArrayList<Pair<String, Long>>()
                 ZipFile(ByteBufferChannel(byteBuffer)).use { zipFile: ZipFile ->
                     for (entry in zipFile.entries) {
                         val name = entry.name
                         val size = entry.size
-                        entriesNamesAndSizes.add(Pair(name, size))
-//                        Log.d("Applog", "entry name: $name - $size")
+//                        entriesNamesAndSizes.add(Pair(name, size))
+                        Log.v("Applog", "entry name: $name - $size")
                     }
                 }
-                Log.d("AppLog", "memory after parsing (got ${entriesNamesAndSizes.size} entries data")
+//                Log.d("AppLog", "memory after parsing (got ${entriesNamesAndSizes.size} entries data")
                 printMemStats(this)
                 jniByteArrayHolder.freeBuffer(byteBuffer)
                 Log.d("AppLog", "memory after freeing")
