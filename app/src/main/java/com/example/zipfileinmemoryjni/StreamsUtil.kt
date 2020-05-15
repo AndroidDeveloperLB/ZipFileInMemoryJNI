@@ -17,6 +17,7 @@ fun Closeable?.closeSilently() {
 fun InputStream.readBytesWithSize(size: Long): ByteArray? {
     return when {
         size < 0L -> this.readBytes()
+        size == 0L -> ByteArray(0)
         size > Int.MAX_VALUE -> null
         else -> {
             ByteArray(size.toInt()).also { this.read(it) }
