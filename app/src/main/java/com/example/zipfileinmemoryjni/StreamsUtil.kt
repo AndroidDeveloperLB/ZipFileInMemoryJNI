@@ -5,11 +5,22 @@ import android.net.Uri
 import android.provider.MediaStore
 import java.io.Closeable
 import java.io.FileInputStream
+import java.io.InputStream
 
 fun Closeable?.tryClose() {
     if (this != null) try {
         this.close()
     } catch (e: Exception) {
+    }
+}
+
+fun InputStream.readBytesWithSize(size: Long): ByteArray? {
+    return when {
+        size < 0L -> this.readBytes()
+        size > Int.MAX_VALUE -> null
+        else -> {
+            ByteArray(size.toInt()).also { this.read(it) }
+        }
     }
 }
 
