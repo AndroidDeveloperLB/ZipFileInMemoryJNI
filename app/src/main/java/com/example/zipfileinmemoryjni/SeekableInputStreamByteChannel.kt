@@ -14,7 +14,7 @@ abstract class SeekableInputStreamByteChannel : SeekableByteChannel {
     private var actualPosition: Long = 0L
     private var cachedSize: Long = -1L
     private var inputStream: InputStream? = null
-
+    private var buffer = ByteArray(DEFAULT_BUFFER_SIZE)
     abstract fun getNewInputStream(): InputStream
 
     override fun isOpen(): Boolean = true
@@ -32,7 +32,6 @@ abstract class SeekableInputStreamByteChannel : SeekableByteChannel {
         return getNewInputStream().use { inputStream: InputStream ->
             if (inputStream is FileInputStream)
                 return inputStream.channel.size()
-            val buffer = ByteArray(DEFAULT_BUFFER_SIZE)
             var bytesCount = 0L
             while (true) {
                 val read = inputStream.read(buffer)
@@ -83,14 +82,15 @@ abstract class SeekableInputStreamByteChannel : SeekableByteChannel {
             inputStream.skip(position - actualPosition)
         }
         //now we have an inputStream right on the needed position
-        val byteArray = ByteArray(min(DEFAULT_BUFFER_SIZE, wanted))
+        if (buffer.size < wanted)
+            buffer = ByteArray(wanted)
         var remaining = wanted
         while (remaining > 0L) {
-            val bytesRead = inputStream.read(byteArray, 0, min(byteArray.size, remaining))
+            val bytesRead = inputStream.read(buffer, 0, min(buffer.size, remaining))
 //            Log.d("AppLog", "read $bytesRead $remaining")
             if (bytesRead < 0)
                 break
-            buf.put(byteArray, 0, wanted)
+            buf.put(buffer, 0, wanted)
             remaining -= bytesRead
         }
         position += wanted
