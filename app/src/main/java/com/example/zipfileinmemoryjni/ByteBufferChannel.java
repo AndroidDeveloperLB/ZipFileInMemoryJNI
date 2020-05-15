@@ -16,8 +16,8 @@ public final class ByteBufferChannel extends SeekableInMemoryByteChannel {
 
     @Override
     public synchronized int read(ByteBuffer dst) {
-        if (buf.remaining() == 0) return -1;
-
+        if (buf.remaining() == 0)
+            return -1;
         int count = min(dst.remaining(), buf.remaining());
         if (count > 0) {
             ByteBuffer tmp = buf.slice();
