@@ -23,17 +23,39 @@ class MainActivity : AppCompatActivity() {
         setContentView(R.layout.activity_main)
         val numberFormat = NumberFormat.getInstance()
         thread {
-            try {
-                val packageInfo = packageManager.getPackageInfo(packageName, 0)
+            val packageInfo = packageManager.getPackageInfo(packageName, 0)
 //                val file = File("/storage/emulated/0/big.xapk")
+//                val file = File("/storage/emulated/0/medium.xapk")
+//                val file = File("/storage/emulated/0/big2.xapk")
+//            val file = File("/storage/emulated/0/huge.xapk")
 //                val file = File("/storage/emulated/0/Chrome.apk")
-                val file = File(packageInfo.applicationInfo.publicSourceDir)
-                val uri = Uri.fromFile(file)
-                val fileSizeFromUri = StreamsUtil.getStreamLengthFromUri(this, uri)
-                val fileSize = file.length()
-                //
-                Log.d("AppLog", "testing file using direct path")
-                ZipFile(file).use { zipFile: ZipFile ->
+//                val file = File("/storage/emulated/0/tiny.zip")
+            val file = File(packageInfo.applicationInfo.publicSourceDir)
+            val uri = Uri.fromFile(file)
+//            val fileSizeFromUri = StreamsUtil.getStreamLengthFromUri(this, uri)
+            val fileSize = file.length()
+            val fileSizeOnDisk = getFileSizeOnDisk(this, file, fileSize)
+            var startTime: Long
+            var endTime: Long
+            startTime = System.currentTimeMillis()
+            //
+            Log.d("AppLog", "testing file using direct path")
+            ZipFile(file).use { zipFile: ZipFile ->
+                val entriesNamesAndSizes = ArrayList<Pair<String, Long>>()
+                for (entry in zipFile.entries) {
+                    val name = entry.name
+                    val size = entry.size
+                    entriesNamesAndSizes.add(Pair(name, size))
+                    Log.v("Applog", "entry name: $name - ${numberFormat.format(size)}")
+                }
+                endTime = System.currentTimeMillis()
+                Log.d("AppLog", "got ${entriesNamesAndSizes.size} entries data. time taken: ${endTime - startTime}ms")
+            }
+            //
+            Log.d("AppLog", "testing file using byte array")
+            try {
+                startTime = System.currentTimeMillis()
+                ZipFile(SeekableInMemoryByteChannel(file.inputStream().readBytesWithSize(fileSize)!!)).use { zipFile: ZipFile ->
                     val entriesNamesAndSizes = ArrayList<Pair<String, Long>>()
                     for (entry in zipFile.entries) {
                         val name = entry.name
@@ -41,35 +63,44 @@ class MainActivity : AppCompatActivity() {
                         entriesNamesAndSizes.add(Pair(name, size))
                         Log.v("Applog", "entry name: $name - ${numberFormat.format(size)}")
                     }
-                    Log.d("AppLog", "got ${entriesNamesAndSizes.size} entries data")
+                    endTime = System.currentTimeMillis()
+                    Log.d("AppLog", "got ${entriesNamesAndSizes.size} entries data. time taken: ${endTime - startTime}ms")
                 }
-                //
-                Log.d("AppLog", "testing file using byte array")
-                try {
-                    ZipFile(SeekableInMemoryByteChannel(file.inputStream().readBytesWithSize(fileSize)!!)).use { zipFile: ZipFile ->
-                        val entriesNamesAndSizes = ArrayList<Pair<String, Long>>()
-                        for (entry in zipFile.entries) {
-                            val name = entry.name
-                            val size = entry.size
-                            entriesNamesAndSizes.add(Pair(name, size))
-                            Log.v("Applog", "entry name: $name - ${numberFormat.format(size)}")
-                        }
-                        Log.d("AppLog", "got ${entriesNamesAndSizes.size} entries data")
+            } catch (e: Throwable) {
+                Log.e("AppLog", "error while trying to parse using byte array:$e")
+                e.printStackTrace()
+            }
+            //
+            Log.d("AppLog", "testing using SeekableInUriByteChannel (re-creating inputStream when needed) ")
+            try {
+                startTime = System.currentTimeMillis()
+                ZipFile(SeekableInUriByteChannel(this, uri)).use { zipFile: ZipFile ->
+                    val entriesNamesAndSizes = ArrayList<Pair<String, Long>>()
+                    for (entry in zipFile.entries) {
+                        val name = entry.name
+                        val size = entry.size
+                        entriesNamesAndSizes.add(Pair(name, size))
+                        Log.v("Applog", "entry name: $name - ${numberFormat.format(size)}")
                     }
-                } catch (e: Throwable) {
-                    Log.e("AppLog", "error while trying to parse using byte array:$e")
-                    e.printStackTrace()
+                    endTime = System.currentTimeMillis()
+                    Log.d("AppLog", "got ${entriesNamesAndSizes.size} entries data. time taken: ${endTime - startTime}ms")
                 }
-                //
-                val fileSizeOnDisk = getFileSizeOnDisk(this, file, fileSize) //+ 1024L * 1024L
-                Log.d("AppLog", "file size:${numberFormat.format(fileSize)} fileSizeOnDisk:${numberFormat.format(fileSizeOnDisk)} fileSizeFromUri:${numberFormat.format(fileSizeFromUri)}")
-                val bytesCountToAllocate = fileSizeOnDisk// fileSize + 10L*1024L * 1024L
-                Log.d("AppLog", "will allocate ${numberFormat.format(bytesCountToAllocate)} bytes")
-                printMemStats(this)
+            } catch (e: Throwable) {
+                Log.e("AppLog", "error while trying to parse using SeekableInUriByteChannel:$e")
+                e.printStackTrace()
+            }
+            //
+            Log.d("AppLog", "testing file using JNI byte array")
+            try {
+                startTime = System.currentTimeMillis()
+//                Log.d("AppLog", "file size:${numberFormat.format(fileSize)} fileSizeOnDisk:${numberFormat.format(fileSizeOnDisk)} fileSizeFromUri:${numberFormat.format(fileSizeFromUri)}")
+                val bytesCountToAllocate = fileSizeOnDisk + 1024L * 1024L
+//                Log.d("AppLog", "will allocate ${numberFormat.format(bytesCountToAllocate)} bytes")
+//                printMemStats(this)
                 val jniByteArrayHolder = JniByteArrayHolder()
                 val byteBuffer = jniByteArrayHolder.allocate(bytesCountToAllocate)
-                Log.d("AppLog", "memory after allocation:")
-                printMemStats(this)
+//                Log.d("AppLog", "memory after allocation:")
+//                printMemStats(this)
                 val inStream = FileInputStream(file)
                 val inBytes = ByteArray(DEFAULT_BUFFER_SIZE)
                 while (inStream.available() > 0) {
@@ -86,13 +117,14 @@ class MainActivity : AppCompatActivity() {
                         Log.v("Applog", "entry name: $name - ${numberFormat.format(size)}")
                     }
                 }
-                Log.d("AppLog", "memory after parsing (got ${entriesNamesAndSizes.size} entries data)")
-                printMemStats(this)
+//                printMemStats(this)
                 jniByteArrayHolder.freeBuffer(byteBuffer)
-                Log.d("AppLog", "memory after freeing")
-                printMemStats(this)
+//                Log.d("AppLog", "memory after freeing")
+//                printMemStats(this)
+                endTime = System.currentTimeMillis()
+                Log.d("AppLog", "got ${entriesNamesAndSizes.size} entries data. time taken: ${endTime - startTime}ms")
             } catch (e: Exception) {
-                Log.e("AppLog", "error:$e")
+                Log.e("AppLog", "error while trying to parse using JNI byte array:$e")
                 e.printStackTrace()
             }
         }

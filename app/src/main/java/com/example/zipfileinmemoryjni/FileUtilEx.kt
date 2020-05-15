@@ -44,10 +44,10 @@ object FileUtilEx {
                     val file = File(linkFileName)
                     if (file.exists() && file.canRead())
                         return ClosableFileHolder(file, parcelFileDescriptor)
-                    parcelFileDescriptor.tryClose()
+                    parcelFileDescriptor.closeSilently()
                 }
             } catch (e: Exception) {
-                parcelFileDescriptor.tryClose()
+                parcelFileDescriptor.closeSilently()
                 parcelFileDescriptor = null
             }
         return null

@@ -7,7 +7,7 @@ import java.io.Closeable
 import java.io.FileInputStream
 import java.io.InputStream
 
-fun Closeable?.tryClose() {
+fun Closeable?.closeSilently() {
     if (this != null) try {
         this.close()
     } catch (e: Exception) {
