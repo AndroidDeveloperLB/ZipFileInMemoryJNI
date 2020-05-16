@@ -5,12 +5,10 @@ import android.content.Context
 import android.content.pm.ApplicationInfo
 import android.net.Uri
 import android.os.Bundle
-import android.os.StatFs
 import android.text.format.Formatter
 import android.util.Log
 import androidx.annotation.WorkerThread
 import androidx.appcompat.app.AppCompatActivity
-import androidx.core.content.ContextCompat
 import org.apache.commons.compress.archivers.zip.ZipArchiveInputStream
 import org.apache.commons.compress.archivers.zip.ZipFile
 import org.apache.commons.compress.utils.SeekableInMemoryByteChannel
@@ -19,7 +17,6 @@ import java.io.FileInputStream
 import java.text.NumberFormat
 import java.util.zip.ZipInputStream
 import kotlin.concurrent.thread
-import kotlin.math.max
 
 class MainActivity : AppCompatActivity() {
     private val numberFormat = NumberFormat.getInstance()
@@ -37,40 +34,40 @@ class MainActivity : AppCompatActivity() {
 //            val applicationInfoWithLargestApkFromInstalledApps = getApplicationInfoWithLargestApkFromInstalledApps(this)
 //            Log.d("AppLog", "packageName of APK to test:${applicationInfoWithLargestApkFromInstalledApps.packageName}")
 //            val file = File(applicationInfoWithLargestApkFromInstalledApps.publicSourceDir)
-            val file = File("/storage/emulated/0/big.xapk")
+//            val file = File("/storage/emulated/0/big.xapk")
 //                val file = File("/storage/emulated/0/medium.xapk")
 //            val file = File("/storage/emulated/0/huge.xapk")
 //                val file = File("/storage/emulated/0/Chrome.apk")
 //                val file = File("/storage/emulated/0/tiny.zip")
 //            val file = File("/storage/emulated/0/base.apk")
 
-            val uri = Uri.fromFile(file)
-            val fileSize = file.length()
-            val fileSizeOnDisk = getFileSizeOnDisk(this, file, fileSize)
-            Log.d("AppLog", "will parse the file: ${file.absolutePath} fileSize:${numberFormat.format(fileSize)} fileSizeOnDisk:${numberFormat.format(fileSizeOnDisk)}")
-            parseUsingAndroidZipFile(file)
-            parseUsingApacheZipFile(file)
-            parseUsingZipInputStream(file)
-            parseUsingApacheZipArchiveInputStream(file)
-            parseUsingApacheZipFileViaByteArray(file, fileSize)
-            parseUsingSeekableInUriByteChannel(uri)
-            parseUsingJniByteArray(file, fileSizeOnDisk)
+//            val uri = Uri.fromFile(file)
+//            val fileSize = file.length()
+//            Log.d("AppLog", "will parse the file: ${file.absolutePath} fileSize:${numberFormat.format(fileSize)} ")
+//            parseUsingAndroidZipFile(file)
+//            parseUsingApacheZipFile(file)
+//            parseUsingZipInputStream(file)
+//            parseUsingApacheZipArchiveInputStream(file)
+//            parseUsingApacheZipFileViaByteArray(file, fileSize)
+//            parseUsingSeekableInUriByteChannel(uri)
+//            parseUsingJniByteArray(file)
             //            val applicationInfo = packageManager.getApplicationInfo("com.google.android.googlequicksearchbox", 0)
 //            tryParseZipFile(File(applicationInfo.publicSourceDir))
 //                        val applicationInfo = packageManager.getApplicationInfo("com.diune.pictures", 0)
 //            tryParseZipFile(File(applicationInfo.publicSourceDir))
 //
-//            val startTime = System.currentTimeMillis()
-//            packageManager.getInstalledApplications(0).forEach {
-//                Log.d("AppLog", "packageName of APK to test:${it.packageName}")
-//                val file = File(it.publicSourceDir)
-//                tryParseZipFile(file)
-//            }
-//            Log.d("AppLog", "done parsing in ${System.currentTimeMillis() - startTime}")
+            val startTime = System.currentTimeMillis()
+            var errorsCount = 0
+            packageManager.getInstalledApplications(0).forEach { applicationInfo ->
+                Log.d("AppLog", "packageName of APK to test:${applicationInfo.packageName}")
+                val file = File(applicationInfo.publicSourceDir)
+                parseUsingJniByteArray(file).let { succeeded -> if (!succeeded) ++errorsCount }
+            }
+            Log.d("AppLog", "done parsing in ${System.currentTimeMillis() - startTime}ms errors:$errorsCount")
         }
     }
 
-    private fun parseUsingAndroidZipFile(file: File) {
+    private fun parseUsingAndroidZipFile(file: File): Boolean {
         Log.d("AppLog", "testing file using direct path - Android framework ZipFile")
         try {
             val startTime = System.currentTimeMillis()
@@ -84,14 +81,16 @@ class MainActivity : AppCompatActivity() {
                 }
                 val endTime = System.currentTimeMillis()
                 Log.d("AppLog", "got ${entriesNamesAndSizes.size} entries data. time taken: ${endTime - startTime}ms")
+                return true
             }
         } catch (e: Throwable) {
             Log.e("AppLog", "error while trying to parse using  Android framework ZipFile:$e")
             e.printStackTrace()
         }
+        return false
     }
 
-    private fun parseUsingApacheZipFile(file: File) {
+    private fun parseUsingApacheZipFile(file: File): Boolean {
         Log.d("AppLog", "testing file using direct path - Apache ZipFile)")
         try {
             val startTime = System.currentTimeMillis()
@@ -105,14 +104,17 @@ class MainActivity : AppCompatActivity() {
                 }
                 val endTime = System.currentTimeMillis()
                 Log.d("AppLog", "got ${entriesNamesAndSizes.size} entries data. time taken: ${endTime - startTime}ms")
+                return true
+
             }
         } catch (e: Throwable) {
             Log.e("AppLog", "error while trying to parse using Apache ZipFile:$e")
             e.printStackTrace()
         }
+        return false
     }
 
-    private fun parseUsingZipInputStream(file: File) {
+    private fun parseUsingZipInputStream(file: File):Boolean {
         Log.d("AppLog", "testing file using ZipInputStream")
         try {
             val startTime = System.currentTimeMillis()
@@ -127,14 +129,16 @@ class MainActivity : AppCompatActivity() {
                 }
                 val endTime = System.currentTimeMillis()
                 Log.d("AppLog", "got ${entriesNamesAndSizes.size} entries data. time taken: ${endTime - startTime}ms")
+                return true
             }
         } catch (e: Throwable) {
             Log.e("AppLog", "error while trying to parse using Apache ZipFile:$e")
             e.printStackTrace()
         }
+        return false
     }
 
-    private fun parseUsingApacheZipArchiveInputStream(file: File) {
+    private fun parseUsingApacheZipArchiveInputStream(file: File) :Boolean{
         Log.d("AppLog", "testing with ZipArchiveInputStream")
         try {
             val startTime = System.currentTimeMillis()
@@ -149,14 +153,16 @@ class MainActivity : AppCompatActivity() {
                 }
                 val endTime = System.currentTimeMillis()
                 Log.d("AppLog", "got ${entriesNamesAndSizes.size} entries data. time taken: ${endTime - startTime}ms")
+                return true
             }
         } catch (e: Throwable) {
             Log.e("AppLog", "error while trying to parse using ZipArchiveInputStream:$e")
             e.printStackTrace()
         }
+        return false
     }
 
-    private fun parseUsingApacheZipFileViaByteArray(file: File, fileSize: Long) {
+    private fun parseUsingApacheZipFileViaByteArray(file: File, fileSize: Long):Boolean {
         Log.d("AppLog", "testing file using byte array")
         try {
             val startTime = System.currentTimeMillis()
@@ -171,14 +177,16 @@ class MainActivity : AppCompatActivity() {
                 }
                 val endTime = System.currentTimeMillis()
                 Log.d("AppLog", "got ${entriesNamesAndSizes.size} entries data. time taken: ${endTime - startTime}ms")
+                return true
             }
         } catch (e: Throwable) {
             Log.e("AppLog", "error while trying to parse using byte array:$e")
             e.printStackTrace()
         }
+        return false
     }
 
-    private fun parseUsingSeekableInUriByteChannel(uri: Uri) {
+    private fun parseUsingSeekableInUriByteChannel(uri: Uri) :Boolean{
         Log.d("AppLog", "testing using SeekableInUriByteChannel (re-creating inputStream when needed) ")
         try {
             val startTime = System.currentTimeMillis()
@@ -192,30 +200,32 @@ class MainActivity : AppCompatActivity() {
                 }
                 val endTime = System.currentTimeMillis()
                 Log.d("AppLog", "got ${entriesNamesAndSizes.size} entries data. time taken: ${endTime - startTime}ms")
+                return true
             }
         } catch (e: Throwable) {
             Log.e("AppLog", "error while trying to parse using SeekableInUriByteChannel:$e")
             e.printStackTrace()
         }
+        return false
     }
 
-    private fun parseUsingJniByteArray(file: File, fileSizeOnDisk: Long) {
+    private fun parseUsingJniByteArray(file: File): Boolean {
         Log.d("AppLog", "testing file using JNI byte array")
         try {
             val startTime = System.currentTimeMillis()
 //                Log.d("AppLog", "file size:${numberFormat.format(fileSize)} fileSizeOnDisk:${numberFormat.format(fileSizeOnDisk)} fileSizeFromUri:${numberFormat.format(fileSizeFromUri)}")
-            val bytesCountToAllocate = fileSizeOnDisk + 1024L * 1024L
+            val bytesCountToAllocate = file.length()
 //                Log.d("AppLog", "will allocate ${numberFormat.format(bytesCountToAllocate)} bytes")
 //                printMemStats(this)
             val jniByteArrayHolder = JniByteArrayHolder()
-            val byteBuffer = jniByteArrayHolder.allocate(bytesCountToAllocate)
+            val byteBuffer = jniByteArrayHolder.allocate(bytesCountToAllocate)!!
 //                Log.d("AppLog", "memory after allocation:")
 //                printMemStats(this)
-            val inStream = FileInputStream(file)
-            val inBytes = ByteArray(DEFAULT_BUFFER_SIZE)
-            while (inStream.available() > 0) {
-                inStream.read(inBytes)
-                byteBuffer.put(inBytes)
+            FileInputStream(file).use { inStream: FileInputStream ->
+                val inBytes = ByteArray(DEFAULT_BUFFER_SIZE)
+                while (inStream.available() > 0) {
+                    byteBuffer.put(inBytes, 0, inStream.read(inBytes))
+                }
             }
             byteBuffer.flip()
             val entriesNamesAndSizes = ArrayList<Pair<String, Long>>()
@@ -233,10 +243,12 @@ class MainActivity : AppCompatActivity() {
 //                printMemStats(this)
             val endTime = System.currentTimeMillis()
             Log.d("AppLog", "got ${entriesNamesAndSizes.size} entries data. time taken: ${endTime - startTime}ms")
+            return true
         } catch (e: Exception) {
             Log.e("AppLog", "error while trying to parse using JNI byte array:$e")
             e.printStackTrace()
         }
+        return false
     }
 
     companion object {
@@ -258,24 +270,6 @@ class MainActivity : AppCompatActivity() {
                 }
             }
             return result
-        }
-
-        private fun getFileSizeOnDisk(context: Context, file: File?, fileSize: Long, defaultBlockSizeIfNotFound: Long = 4096L): Long {
-            var blockSize: Long = 0L
-            if (file != null)
-                blockSize = StatFs(file.absolutePath).blockSizeLong
-            else {
-                //we don't have a file, so we guess based on the max of all storages
-                val externalCacheDirs: Array<File?> = ContextCompat.getExternalCacheDirs(context)
-                externalCacheDirs.asSequence().filterNotNull().forEach { cacheFolder: File ->
-                    blockSize = max(blockSize, StatFs(cacheFolder.absolutePath).blockSizeLong)
-                }
-                if (blockSize == 0L)
-                //default in case we couldn't find for some reason
-                    blockSize = defaultBlockSizeIfNotFound
-            }
-            //based on: https://stackoverflow.com/questions/3750590/get-size-of-file-on-disk/3750658#3750658
-            return blockSize * ((fileSize + blockSize - 1) / blockSize)
         }
 
         private fun printMemStats(context: Context) {

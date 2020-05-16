@@ -67,6 +67,8 @@ abstract class SeekableInputStreamByteChannel : SeekableByteChannel {
             return -1
         if (wanted > possible)
             wanted = possible
+//        inputStream?.close()
+//        inputStream=null
         var inputStream = this.inputStream
         //skipping to required position
         if (inputStream == null) {
