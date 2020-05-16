@@ -8,11 +8,9 @@ import java.nio.ByteBuffer
 import java.nio.channels.SeekableByteChannel
 
 @RequiresApi(Build.VERSION_CODES.N)
-abstract class SeekableInputStreamByteChannel : SeekableByteChannel {
+abstract class InefficientSeekableInputStreamByteChannel : SeekableByteChannel {
     private var position: Long = 0L
-    private var actualPosition: Long = 0L
     private var cachedSize: Long = -1L
-    private var inputStream: InputStream? = null
     private var buffer = ByteArray(DEFAULT_BUFFER_SIZE)
     abstract fun getNewInputStream(): InputStream
 
@@ -53,7 +51,6 @@ abstract class SeekableInputStreamByteChannel : SeekableByteChannel {
     }
 
     override fun close() {
-        inputStream.closeSilently().also { inputStream = null }
     }
 
     override fun read(buf: ByteBuffer): Int {
@@ -68,30 +65,13 @@ abstract class SeekableInputStreamByteChannel : SeekableByteChannel {
             wanted = possible
         if (buffer.size < wanted)
             buffer = ByteArray(wanted)
-//        inputStream?.close()
-//        inputStream=null
-        var inputStream = this.inputStream
-        //skipping to required position
-        if (inputStream == null) {
-            inputStream = getNewInputStream()
-//            Log.d("AppLog", "getNewInputStream")
+        getNewInputStream().use { inputStream ->
             inputStream.skip(position)
-            this.inputStream = inputStream
-        } else {
-            if (actualPosition > position) {
-                inputStream.close()
-                actualPosition = 0L
-                inputStream = getNewInputStream()
-//                Log.d("AppLog", "getNewInputStream")
-                this.inputStream = inputStream
-            }
-            inputStream.skip(position - actualPosition)
+            //now we have an inputStream right on the needed position
+            inputStream.readBytesIntoByteArray(buffer, wanted)
         }
-        //now we have an inputStream right on the needed position
-        inputStream.readBytesIntoByteArray(buffer, wanted)
         buf.put(buffer, 0, wanted)
         position += wanted
-        actualPosition = position
         return wanted
     }
 

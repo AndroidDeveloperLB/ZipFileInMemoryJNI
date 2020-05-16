@@ -50,20 +50,28 @@ class MainActivity : AppCompatActivity() {
 //            parseUsingApacheZipArchiveInputStream(file)
 //            parseUsingApacheZipFileViaByteArray(file, fileSize)
 //            parseUsingSeekableInUriByteChannel(uri)
+//            parseUsingInefficientSeekableInUriByteChannel(uri)
+
 //            parseUsingJniByteArray(file)
             //            val applicationInfo = packageManager.getApplicationInfo("com.google.android.googlequicksearchbox", 0)
 //            tryParseZipFile(File(applicationInfo.publicSourceDir))
 //                        val applicationInfo = packageManager.getApplicationInfo("com.diune.pictures", 0)
 //            tryParseZipFile(File(applicationInfo.publicSourceDir))
 //
-            val startTime = System.currentTimeMillis()
-            var errorsCount = 0
+//            val startTime = System.currentTimeMillis()
+//            var errorsCount = 0
+//            var successCount=0
             packageManager.getInstalledApplications(0).forEach { applicationInfo ->
                 Log.d("AppLog", "packageName of APK to test:${applicationInfo.packageName}")
                 val file = File(applicationInfo.publicSourceDir)
-                parseUsingJniByteArray(file).let { succeeded -> if (!succeeded) ++errorsCount }
+//                parseUsingJniByteArray(file).let { succeeded -> if (!succeeded) ++errorsCount }
+                val uri = Uri.fromFile(file)
+//                parseUsingSeekableInUriByteChannel(uri).let { succeeded -> if (!succeeded) ++errorsCount else ++successCount }
+//                parseUsingInefficientSeekableInUriByteChannel(uri).let { succeeded -> if (!succeeded) ++errorsCount else ++successCount }
+                parseUsingSeekableInUriByteChannel(uri)
+                parseUsingInefficientSeekableInUriByteChannel(uri)
             }
-            Log.d("AppLog", "done parsing in ${System.currentTimeMillis() - startTime}ms errors:$errorsCount")
+//            Log.d("AppLog", "done parsing in ${System.currentTimeMillis() - startTime}ms errorsCount:$errorsCount successCount:$successCount")
         }
     }
 
@@ -114,7 +122,7 @@ class MainActivity : AppCompatActivity() {
         return false
     }
 
-    private fun parseUsingZipInputStream(file: File):Boolean {
+    private fun parseUsingZipInputStream(file: File): Boolean {
         Log.d("AppLog", "testing file using ZipInputStream")
         try {
             val startTime = System.currentTimeMillis()
@@ -138,7 +146,7 @@ class MainActivity : AppCompatActivity() {
         return false
     }
 
-    private fun parseUsingApacheZipArchiveInputStream(file: File) :Boolean{
+    private fun parseUsingApacheZipArchiveInputStream(file: File): Boolean {
         Log.d("AppLog", "testing with ZipArchiveInputStream")
         try {
             val startTime = System.currentTimeMillis()
@@ -162,7 +170,7 @@ class MainActivity : AppCompatActivity() {
         return false
     }
 
-    private fun parseUsingApacheZipFileViaByteArray(file: File, fileSize: Long):Boolean {
+    private fun parseUsingApacheZipFileViaByteArray(file: File, fileSize: Long): Boolean {
         Log.d("AppLog", "testing file using byte array")
         try {
             val startTime = System.currentTimeMillis()
@@ -186,7 +194,7 @@ class MainActivity : AppCompatActivity() {
         return false
     }
 
-    private fun parseUsingSeekableInUriByteChannel(uri: Uri) :Boolean{
+    private fun parseUsingSeekableInUriByteChannel(uri: Uri): Boolean {
         Log.d("AppLog", "testing using SeekableInUriByteChannel (re-creating inputStream when needed) ")
         try {
             val startTime = System.currentTimeMillis()
@@ -204,6 +212,29 @@ class MainActivity : AppCompatActivity() {
             }
         } catch (e: Throwable) {
             Log.e("AppLog", "error while trying to parse using SeekableInUriByteChannel:$e")
+            e.printStackTrace()
+        }
+        return false
+    }
+
+    private fun parseUsingInefficientSeekableInUriByteChannel(uri: Uri): Boolean {
+        Log.d("AppLog", "testing using InefficientSeekableInUriByteChannel (re-creating inputStream when needed) ")
+        try {
+            val startTime = System.currentTimeMillis()
+            ZipFile(InefficientSeekableInUriByteChannel(this, uri)).use { zipFile: ZipFile ->
+                val entriesNamesAndSizes = ArrayList<Pair<String, Long>>()
+                for (entry in zipFile.entries) {
+                    val name = entry.name
+                    val size = entry.size
+                    entriesNamesAndSizes.add(Pair(name, size))
+                    Log.v("Applog", "entry name: $name - ${numberFormat.format(size)}")
+                }
+                val endTime = System.currentTimeMillis()
+                Log.d("AppLog", "got ${entriesNamesAndSizes.size} entries data. time taken: ${endTime - startTime}ms")
+                return true
+            }
+        } catch (e: Throwable) {
+            Log.e("AppLog", "error while trying to parse using InefficientSeekableInUriByteChannel:$e")
             e.printStackTrace()
         }
         return false
