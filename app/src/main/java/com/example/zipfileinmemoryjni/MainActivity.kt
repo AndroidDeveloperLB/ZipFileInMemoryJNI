@@ -31,8 +31,8 @@ class MainActivity : AppCompatActivity() {
         thread {
             Log.d("AppLog", "started testing")
 
-            val packageInfo = packageManager.getPackageInfo("com.google.android.apps.wellbeing", 0)
-            val file = File(packageInfo.applicationInfo.publicSourceDir)
+//            val packageInfo = packageManager.getPackageInfo("com.google.android.apps.wellbeing", 0)
+//            val file = File(packageInfo.applicationInfo.publicSourceDir)
 //            val applicationInfoWithLargestApkFromInstalledApps = getApplicationInfoWithLargestApkFromInstalledApps(this)
 //            Log.d("AppLog", "packageName of APK to test:${applicationInfoWithLargestApkFromInstalledApps.packageName}")
 //            val file = File(applicationInfoWithLargestApkFromInstalledApps.publicSourceDir)
@@ -43,7 +43,7 @@ class MainActivity : AppCompatActivity() {
 //                val file = File("/storage/emulated/0/tiny.zip")
 //            val file = File("/storage/emulated/0/base.apk")
 
-            val uri = Uri.fromFile(file)
+//            val uri = Uri.fromFile(file)
 //            val fileSize = file.length()
 //            Log.d("AppLog", "will parse the file: ${file.absolutePath} fileSize:${numberFormat.format(fileSize)} ")
 //            parseUsingAndroidZipFile(file)
@@ -63,7 +63,7 @@ class MainActivity : AppCompatActivity() {
 //            val startTime = System.currentTimeMillis()
 //            var errorsCount = 0
 //            var successCount=0
-            var issuesFound = 0
+//            var issuesFound = 0
 
             packageManager.getInstalledApplications(0).forEach { applicationInfo ->
 //                Log.d("AppLog", "packageName of APK to test:${applicationInfo.packageName}")
@@ -97,7 +97,8 @@ class MainActivity : AppCompatActivity() {
             }
 
 //            Log.d("AppLog", "done parsing in ${System.currentTimeMillis() - startTime}ms errorsCount:$errorsCount successCount:$successCount")
-            Log.d("AppLog", "done issuesFound:$issuesFound")
+//            Log.d("AppLog", "done issuesFound:$issuesFound")
+            Log.d("AppLog", "done")
         }
     }
 
