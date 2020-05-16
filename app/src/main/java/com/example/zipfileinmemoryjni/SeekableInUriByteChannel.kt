@@ -5,6 +5,7 @@ import android.net.Uri
 import android.os.Build
 import androidx.annotation.RequiresApi
 import com.example.zipfileinmemoryjni.SeekableInputStreamByteChannel
+import java.io.BufferedInputStream
 import java.io.InputStream
 
 @RequiresApi(Build.VERSION_CODES.N)
@@ -13,5 +14,6 @@ class SeekableInUriByteChannel(someContext: Context, private val uri: Uri) : See
 
     override fun calculateSize(): Long = StreamsUtil.getStreamLengthFromUri(applicationContext, uri)
 
-    override fun getNewInputStream(): InputStream = applicationContext.contentResolver.openInputStream(uri)!!
+    override fun getNewInputStream(): InputStream = BufferedInputStream(
+            applicationContext.contentResolver.openInputStream(uri)!!)
 }

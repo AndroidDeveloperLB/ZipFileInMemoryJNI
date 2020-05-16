@@ -34,10 +34,13 @@ abstract class SeekableInputStreamByteChannel : SeekableByteChannel {
                 return inputStream.channel.size()
             var bytesCount = 0L
             while (true) {
-                val read = inputStream.read(buffer)
-                if (read < 0)
+                val available = inputStream.available()
+                if (available == 0)
                     break
-                bytesCount += read
+                val skip = inputStream.skip(available.toLong())
+                if (skip < 0)
+                    break
+                bytesCount += skip
             }
             bytesCount
         }
