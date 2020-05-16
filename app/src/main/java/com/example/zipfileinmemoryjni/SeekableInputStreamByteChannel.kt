@@ -1,10 +1,10 @@
 package com.example.zipfileinmemoryjni
 
 import android.os.Build
+import android.util.Log
 import androidx.annotation.RequiresApi
 import java.io.FileInputStream
 import java.io.InputStream
-import java.lang.Integer.min
 import java.nio.ByteBuffer
 import java.nio.channels.SeekableByteChannel
 
@@ -87,15 +87,8 @@ abstract class SeekableInputStreamByteChannel : SeekableByteChannel {
         //now we have an inputStream right on the needed position
         if (buffer.size < wanted)
             buffer = ByteArray(wanted)
-        var remaining = wanted
-        while (remaining > 0L) {
-            val bytesRead = inputStream.read(buffer, 0, min(buffer.size, remaining))
-//            Log.d("AppLog", "read $bytesRead $remaining")
-            if (bytesRead < 0)
-                break
-            buf.put(buffer, 0, wanted)
-            remaining -= bytesRead
-        }
+        inputStream.readBytesIntoByteArray(buffer, wanted)
+        buf.put(buffer, 0, wanted)
         position += wanted
         actualPosition = position
         return wanted

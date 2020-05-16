@@ -15,25 +15,27 @@ fun Closeable?.closeSilently() {
 }
 
 fun InputStream.readBytesWithSize(size: Long): ByteArray? {
-//    return  this.readBytes()
     return when {
         size < 0L -> this.readBytes()
         size == 0L -> ByteArray(0)
         size > Int.MAX_VALUE -> null
         else -> {
-            val sizeInt = size.toInt()
-            val result = ByteArray(sizeInt)
-            var offset=0
-            while (true) {
-                val read = this.read(result, offset, sizeInt -offset)
-                if (read == -1)
-                    break
-                offset+=read
-                if(offset>= sizeInt)
-                    break
-            }
+            val result = ByteArray(size.toInt())
+            readBytesIntoByteArray(result)
             result
         }
+    }
+}
+
+fun InputStream.readBytesIntoByteArray(byteArray: ByteArray, bytesToRead: Int = byteArray.size) {
+    var offset = 0
+    while (true) {
+        val read = this.read(byteArray, offset, bytesToRead - offset)
+        if (read == -1)
+            break
+        offset += read
+        if (offset >= bytesToRead)
+            break
     }
 }
 
