@@ -34,10 +34,7 @@ abstract class InefficientSeekableInputStreamByteChannel : SeekableByteChannel {
                 val available = inputStream.available()
                 if (available == 0)
                     break
-                val skip = inputStream.skip(available.toLong())
-                if (skip < 0)
-                    break
-                bytesCount += skip
+                bytesCount += inputStream.skipForcibly(available.toLong())
             }
             bytesCount
         }
@@ -66,7 +63,7 @@ abstract class InefficientSeekableInputStreamByteChannel : SeekableByteChannel {
         if (buffer.size < wanted)
             buffer = ByteArray(wanted)
         getNewInputStream().use { inputStream ->
-            inputStream.skip(position)
+            inputStream.skipForcibly(position)
             //now we have an inputStream right on the needed position
             inputStream.readBytesIntoByteArray(buffer, wanted)
         }

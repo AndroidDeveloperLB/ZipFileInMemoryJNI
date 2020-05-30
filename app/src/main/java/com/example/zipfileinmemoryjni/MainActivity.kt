@@ -60,45 +60,66 @@ class MainActivity : AppCompatActivity() {
 //                        val applicationInfo = packageManager.getApplicationInfo("com.diune.pictures", 0)
 //            tryParseZipFile(File(applicationInfo.publicSourceDir))
 //
-//            val startTime = System.currentTimeMillis()
-//            var errorsCount = 0
-//            var successCount=0
-//            var issuesFound = 0
+            checkSeekableInputStreamByteChannel()
+            runComparisonOnAllInstalledApkFiles()
+            Log.d("AppLog", "done with all tests")
+        }
+    }
 
-            packageManager.getInstalledApplications(0).forEach { applicationInfo ->
-//                Log.d("AppLog", "packageName of APK to test:${applicationInfo.packageName}")
-                val file = File(applicationInfo.publicSourceDir)
-//                parseUsingJniByteArray(file).let { succeeded -> if (!succeeded) ++errorsCount }
-                val uri = Uri.fromFile(file)
-//                parseUsingSeekableInUriByteChannel(uri).let { succeeded -> if (!succeeded) ++errorsCount else ++successCount }
-//                parseUsingInefficientSeekableInUriByteChannel(uri).let { succeeded -> if (!succeeded) ++errorsCount else ++successCount }
-//                val parseUsingAndroidZipFileResult = parseUsingAndroidZipFile(file)
-                val parseUsingSeekableInUriByteChannelResult = parseUsingSeekableInUriByteChannel(uri)
-//                val parseUsingInefficientSeekableInUriByteChannelResult = parseUsingInefficientSeekableInUriByteChannel(uri)
-                if(parseUsingSeekableInUriByteChannelResult==null){
-                    Log.d("AppLog", "error: couldn't hanlde file:$file")
+    private fun checkSeekableInputStreamByteChannel() {
+        Log.d("AppLog", "verifying good results:")
+        packageManager.getInstalledApplications(0).forEach { applicationInfo ->
+            val file = File(applicationInfo.publicSourceDir)
+            val zipFileParsingResult = parseUsingApacheZipFile(file)
+            val newMethodParsingResult = parseUsingSeekableInUriByteChannel(Uri.fromFile(file))
+            when {
+                zipFileParsingResult == null && newMethodParsingResult == null -> Log.e("AppLog", "failed to parse file $file using any method")
+                zipFileParsingResult == null && newMethodParsingResult != null -> Log.e("AppLog", "somehow managed to parse using other method but not using ZipFile - $file")
+                zipFileParsingResult != null && newMethodParsingResult == null -> Log.e("AppLog", "failed to parse file while ZipFile could - $file")
+                zipFileParsingResult!!.entriesAndSizes.size != newMethodParsingResult!!.entriesAndSizes.size -> Log.e("AppLog", "wrong number of entries for $file")
+                else -> {
+                    val nameToSizeMap = HashMap<String, Long>()
+                    zipFileParsingResult.entriesAndSizes.forEach { entriesAndSize -> nameToSizeMap.put(entriesAndSize.first, entriesAndSize.second) }
+                    for (entriesAndSize in newMethodParsingResult.entriesAndSizes) {
+                        if (nameToSizeMap[entriesAndSize.first] != entriesAndSize.second) {
+                            Log.e("AppLog", "got wrong entry data for file $file")
+                            break
+                        }
+                    }
                 }
-//                if (parseUsingSeekableInUriByteChannelResult != null && parseUsingInefficientSeekableInUriByteChannelResult != null) {
-//                    if (parseUsingAndroidZipFileResult != null) {
-//                        if (parseUsingAndroidZipFileResult.entriesAndSizes.size != parseUsingSeekableInUriByteChannelResult.entriesAndSizes.size) {
-//                            Log.d("AppLog", "parseUsingAndroidZipFileResult:${parseUsingAndroidZipFileResult.entriesAndSizes.size} vs  ${parseUsingAndroidZipFileResult.entriesAndSizes.size}")
-//                            ++issuesFound
-//                        }
-//                        if (parseUsingAndroidZipFileResult.entriesAndSizes.size != parseUsingInefficientSeekableInUriByteChannelResult.entriesAndSizes.size) {
-//                            Log.d("AppLog", "parseUsingInefficientSeekableInUriByteChannelResult:${parseUsingInefficientSeekableInUriByteChannelResult.entriesAndSizes.size} vs ${parseUsingAndroidZipFileResult.entriesAndSizes.size}")
-//                            ++issuesFound
-//                        }
-//                    }
-//                    if (parseUsingSeekableInUriByteChannelResult.entriesAndSizes.size != parseUsingInefficientSeekableInUriByteChannelResult.entriesAndSizes.size) {
-//                        Log.d("AppLog", "different entries sizes: $parseUsingSeekableInUriByteChannelResult vs $parseUsingInefficientSeekableInUriByteChannelResult")
-//                        ++issuesFound
-//                    }
-//                }
             }
+        }
+        Log.d("AppLog", "done checking")
+    }
 
-//            Log.d("AppLog", "done parsing in ${System.currentTimeMillis() - startTime}ms errorsCount:$errorsCount successCount:$successCount")
-//            Log.d("AppLog", "done issuesFound:$issuesFound")
-            Log.d("AppLog", "done")
+    private fun runComparisonOnAllInstalledApkFiles() {
+        for (i in 0..7) {
+            val startTime = System.currentTimeMillis()
+            var errorsCount = 0
+            when (i) {
+                0 -> Log.d("AppLog", "parsing using JniByteArray:")
+                1 -> Log.d("AppLog", "parsing using SeekableInUriByteChannel:")
+                2 -> Log.d("AppLog", "parsing using InefficientSeekableInUriByteChannel:")
+                3 -> Log.d("AppLog", "parsing using AndroidZipFile:")
+                4 -> Log.d("AppLog", "parsing using ApacheZipFile:")
+                5 -> Log.d("AppLog", "parsing using ZipInputStream:")
+                6 -> Log.d("AppLog", "parsing using ApacheZipArchiveInputStream:")
+                7 -> Log.d("AppLog", "parsing using ZipInputStream:")
+            }
+            packageManager.getInstalledApplications(0).forEach { applicationInfo ->
+                val file = File(applicationInfo.publicSourceDir)
+                when (i) {
+                    0 -> parseUsingJniByteArray(file).let { parsingResult -> if (parsingResult == null) ++errorsCount }
+                    1 -> parseUsingSeekableInUriByteChannel(Uri.fromFile(file)).let { parsingResult -> if (parsingResult == null) ++errorsCount }
+                    2 -> parseUsingInefficientSeekableInUriByteChannel(Uri.fromFile(file)).let { parsingResult -> if (parsingResult == null) ++errorsCount }
+                    3 -> parseUsingAndroidZipFile(file).let { parsingResult -> if (parsingResult == null) ++errorsCount }
+                    4 -> parseUsingApacheZipFile(file).let { parsingResult -> if (parsingResult == null) ++errorsCount }
+                    5 -> parseUsingZipInputStream(file).let { parsingResult -> if (parsingResult == null) ++errorsCount }
+                    6 -> parseUsingApacheZipArchiveInputStream(file).let { parsingResult -> if (parsingResult == null) ++errorsCount }
+                    7 -> parseUsingApacheZipFileViaByteArray(file, file.length()).let { parsingResult -> if (parsingResult == null) ++errorsCount }
+                }
+            }
+            Log.d("AppLog", "done parsing in ${System.currentTimeMillis() - startTime}ms errorsCount:$errorsCount")
         }
     }
 

@@ -27,6 +27,15 @@ fun InputStream.readBytesWithSize(size: Long): ByteArray? {
     }
 }
 
+fun InputStream.skipForcibly(size: Long): Long {
+    if (size <= 0L)
+        return 0L
+    var bytesToSkip = size
+    while (bytesToSkip > 0)
+        bytesToSkip -= skip(bytesToSkip)
+    return size
+}
+
 fun InputStream.readBytesIntoByteArray(byteArray: ByteArray, bytesToRead: Int = byteArray.size) {
     var offset = 0
     while (true) {
@@ -64,10 +73,7 @@ object StreamsUtil {
                     val available = inputStream.available()
                     if (available == 0)
                         break
-                    val skip = inputStream.skip(available.toLong())
-                    if (skip < 0)
-                        break
-                    bytesCount += skip
+                    bytesCount += inputStream.skip(available.toLong())
                 }
                 if (bytesCount > 0L)
                     return bytesCount

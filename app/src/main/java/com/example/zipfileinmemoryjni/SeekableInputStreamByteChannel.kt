@@ -1,6 +1,7 @@
 package com.example.zipfileinmemoryjni
 
 import android.os.Build
+import android.util.Log
 import androidx.annotation.RequiresApi
 import java.io.FileInputStream
 import java.io.InputStream
@@ -36,7 +37,7 @@ abstract class SeekableInputStreamByteChannel : SeekableByteChannel {
                 val available = inputStream.available()
                 if (available == 0)
                     break
-                val skip = inputStream.skip(available.toLong())
+                val skip = inputStream.skipForcibly(available.toLong())
                 if (skip < 0)
                     break
                 bytesCount += skip
@@ -75,7 +76,7 @@ abstract class SeekableInputStreamByteChannel : SeekableByteChannel {
         if (inputStream == null) {
             inputStream = getNewInputStream()
 //            Log.d("AppLog", "getNewInputStream")
-            inputStream.skip(position)
+            inputStream.skipForcibly(position)
             this.inputStream = inputStream
         } else {
             if (actualPosition > position) {
@@ -85,7 +86,7 @@ abstract class SeekableInputStreamByteChannel : SeekableByteChannel {
 //                Log.d("AppLog", "getNewInputStream")
                 this.inputStream = inputStream
             }
-            inputStream.skip(position - actualPosition)
+            inputStream.skipForcibly(position - actualPosition)
         }
         //now we have an inputStream right on the needed position
         inputStream.readBytesIntoByteArray(buffer, wanted)
